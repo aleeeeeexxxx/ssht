@@ -47,7 +47,11 @@ export default function LogViewer() {
   }, []);
 
   useEffect(() => {
+    let shouldReconnect = true;
+
     const connect = () => {
+      if (!shouldReconnect) return;
+
       const ws = new WebSocket(getLogsWebSocketUrl());
 
       ws.onopen = () => {
@@ -66,7 +70,9 @@ export default function LogViewer() {
       ws.onclose = () => {
         setConnected(false);
         // Reconnect after 3 seconds
-        setTimeout(connect, 3000);
+        if (shouldReconnect) {
+          setTimeout(connect, 3000);
+        }
       };
 
       ws.onerror = () => {
@@ -79,6 +85,7 @@ export default function LogViewer() {
     connect();
 
     return () => {
+      shouldReconnect = false;
       if (wsRef.current) {
         wsRef.current.close();
       }
