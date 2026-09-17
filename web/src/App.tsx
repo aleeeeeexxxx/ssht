@@ -120,7 +120,7 @@ function App() {
             display: 'flex',
             flexDirection: { xs: 'column', md: 'row' },
             gap: 2,
-            height: { md: 'calc(100vh - 100px)' },
+            height: { md: 'calc(100vh - 140px)' },
           }}
         >
           <Box sx={{ flex: { xs: '1', md: '1 1 60%' }, minWidth: 0, height: { xs: 'auto', md: '100%' }, overflow: 'auto' }}>
@@ -135,6 +135,18 @@ function App() {
           </Box>
         </Box>
       </Container>
+
+      <Box
+        component="footer"
+        sx={{
+          py: 1,
+          textAlign: 'center',
+          color: 'grey.600',
+          fontSize: '0.75rem',
+        }}
+      >
+        © 2026 ssht. Made with ❤️
+      </Box>
 
       <TunnelForm
         open={formOpen}

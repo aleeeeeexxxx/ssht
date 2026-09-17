@@ -19,6 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 前端开发用 `cd web && npm run dev`，后端用 `make run-debug`
 - 生产构建用 `make build-all`（含前端打包）
 - 集成测试需要真实 SSH 服务器
+- 每次改动后记得更新相关文档（README.md, docs/, CLAUDE.md）
 
 ## Project Overview
 
