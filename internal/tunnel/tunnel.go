@@ -24,6 +24,7 @@ const (
 )
 
 const maxRetries = 5
+const keepaliveInterval = 30 * time.Second
 
 func (s State) String() string {
 	switch s {
@@ -91,6 +92,7 @@ type Tunnel struct {
 	listener          net.Listener
 	ctx               context.Context
 	cancel            context.CancelFunc
+	keepaliveCancel   context.CancelFunc
 	stateChanges      chan<- StateChange
 	reconnectInterval time.Duration
 }
@@ -237,6 +239,15 @@ func (t *Tunnel) run() {
 }
 
 func (t *Tunnel) connect() error {
+	// Stop previous keepalive if any
+	t.mu.Lock()
+	if t.keepaliveCancel != nil {
+		logger.Log.Debugw("stopping previous keepalive", "tunnel", t.Config.Name)
+		t.keepaliveCancel()
+		t.keepaliveCancel = nil
+	}
+	t.mu.Unlock()
+
 	authMethods, err := t.getAuthMethods()
 	if err != nil {
 		return fmt.Errorf("auth setup failed: %w", err)
@@ -279,6 +290,14 @@ func (t *Tunnel) connect() error {
 		"remote", t.Config.RemoteAddr(),
 		"local", t.Config.LocalAddr(),
 	)
+
+	// Start keepalive goroutine with its own cancel context
+	keepaliveCtx, keepaliveCancel := context.WithCancel(t.ctx)
+	t.mu.Lock()
+	t.keepaliveCancel = keepaliveCancel
+	t.mu.Unlock()
+	logger.Log.Debugw("starting keepalive", "tunnel", t.Config.Name, "interval", keepaliveInterval)
+	go t.keepalive(keepaliveCtx)
 
 	return nil
 }
@@ -392,6 +411,13 @@ func (t *Tunnel) handleConnection(remoteConn net.Conn) {
 }
 
 func (t *Tunnel) cleanup() {
+	t.mu.Lock()
+	if t.keepaliveCancel != nil {
+		t.keepaliveCancel()
+		t.keepaliveCancel = nil
+	}
+	t.mu.Unlock()
+
 	if t.listener != nil {
 		t.listener.Close()
 		t.listener = nil
@@ -399,5 +425,42 @@ func (t *Tunnel) cleanup() {
 	if t.client != nil {
 		t.client.Close()
 		t.client = nil
+	}
+}
+
+func (t *Tunnel) keepalive(ctx context.Context) {
+	ticker := time.NewTicker(keepaliveInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Log.Debugw("keepalive stopped", "tunnel", t.Config.Name)
+			return
+		case <-ticker.C:
+			t.mu.RLock()
+			client := t.client
+			t.mu.RUnlock()
+
+			if client == nil {
+				return
+			}
+
+			_, _, err := client.SendRequest("keepalive@openssh.com", true, nil)
+			if err != nil {
+				logger.Log.Warnw("keepalive failed, connection may be dead",
+					"tunnel", t.Config.Name,
+					"error", err,
+				)
+				// Close listener to trigger reconnect
+				t.mu.Lock()
+				if t.listener != nil {
+					t.listener.Close()
+				}
+				t.mu.Unlock()
+				return
+			}
+			logger.Log.Infow("keepalive ok", "tunnel", t.Config.Name)
+		}
 	}
 }
