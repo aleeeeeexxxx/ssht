@@ -56,11 +56,15 @@ jobs:
         run: |
           go build -ldflags="-s -w" -o ssht-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }} ./cmd/ssht
 
+      - name: Package as zip
+        run: |
+          zip ssht-${{ matrix.goos }}-${{ matrix.goarch }}.zip ssht-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }}
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ssht-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: ssht-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }}
+          path: ssht-${{ matrix.goos }}-${{ matrix.goarch }}.zip
 
   release:
     needs: build
@@ -76,7 +80,7 @@ jobs:
       - name: Prepare release files
         run: |
           mkdir -p release
-          find artifacts -type f -name 'ssht-*' -exec mv {} release/ \;
+          find artifacts -type f -name '*.zip' -exec mv {} release/ \;
           ls -la release/
 
       - name: Create Release
