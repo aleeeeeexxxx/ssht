@@ -1,0 +1,16 @@
+{
+  "tunnels": [
+    {
+      "name": "dev-server",
+      "host": "10.237.153.61",
+      "port": 22,
+      "user": "ccloud",
+      "auth_method": "key",
+      "key_path": "~/.ssh/another_vm",
+      "remote_host": "0.0.0.0",
+      "remote_port": 9999,
+      "local_host": "127.0.0.1",
+      "local_port": 3000
+    }
+  ]
+}
