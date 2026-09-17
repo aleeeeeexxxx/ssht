@@ -129,6 +129,16 @@ func (s *Server) createTunnel(c *gin.Context) {
 		return
 	}
 
+	// Validate auth credentials
+	if req.AuthMethod == "key" && req.KeyPath == "" && req.KeyContent == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "SSH key is required for key authentication"})
+		return
+	}
+	if req.AuthMethod == "password" && req.Password == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "password is required for password authentication"})
+		return
+	}
+
 	// Set defaults
 	if req.Port == 0 {
 		req.Port = 22
