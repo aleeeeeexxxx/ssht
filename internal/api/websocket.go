@@ -23,38 +23,49 @@ type LogEntry struct {
 	Fields    map[string]interface{} `json:"fields,omitempty"`
 }
 
+type wsClient struct {
+	conn *websocket.Conn
+	mu   sync.Mutex
+}
+
 type LogBroadcaster struct {
-	clients map[*websocket.Conn]bool
+	clients map[*wsClient]bool
 	mu      sync.RWMutex
 }
 
 var logBroadcaster = &LogBroadcaster{
-	clients: make(map[*websocket.Conn]bool),
+	clients: make(map[*wsClient]bool),
 }
 
-func (lb *LogBroadcaster) AddClient(conn *websocket.Conn) {
+func (lb *LogBroadcaster) AddClient(client *wsClient) {
 	lb.mu.Lock()
-	lb.clients[conn] = true
+	lb.clients[client] = true
 	lb.mu.Unlock()
 }
 
-func (lb *LogBroadcaster) RemoveClient(conn *websocket.Conn) {
+func (lb *LogBroadcaster) RemoveClient(client *wsClient) {
 	lb.mu.Lock()
-	delete(lb.clients, conn)
+	delete(lb.clients, client)
 	lb.mu.Unlock()
 }
 
 func (lb *LogBroadcaster) Broadcast(entry LogEntry) {
 	lb.mu.RLock()
-	defer lb.mu.RUnlock()
+	clients := make([]*wsClient, 0, len(lb.clients))
+	for client := range lb.clients {
+		clients = append(clients, client)
+	}
+	lb.mu.RUnlock()
 
 	data, err := json.Marshal(entry)
 	if err != nil {
 		return
 	}
 
-	for conn := range lb.clients {
-		conn.WriteMessage(websocket.TextMessage, data)
+	for _, client := range clients {
+		client.mu.Lock()
+		client.conn.WriteMessage(websocket.TextMessage, data)
+		client.mu.Unlock()
 	}
 }
 
@@ -76,8 +87,9 @@ func (s *Server) handleWebSocketLogs(c *gin.Context) {
 	}
 	defer conn.Close()
 
-	logBroadcaster.AddClient(conn)
-	defer logBroadcaster.RemoveClient(conn)
+	client := &wsClient{conn: conn}
+	logBroadcaster.AddClient(client)
+	defer logBroadcaster.RemoveClient(client)
 
 	// Keep connection alive
 	for {
