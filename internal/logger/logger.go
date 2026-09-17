@@ -9,29 +9,41 @@ import (
 
 var Log *zap.SugaredLogger
 var broadcastFunc func(level, message string, fields map[string]interface{})
+var atomicLevel zap.AtomicLevel
 
 func Init(debug bool) {
-	var config zap.Config
+	if debug {
+		atomicLevel = zap.NewAtomicLevelAt(zapcore.DebugLevel)
+	} else {
+		atomicLevel = zap.NewAtomicLevelAt(zapcore.InfoLevel)
+	}
+
+	encoderConfig := zapcore.EncoderConfig{
+		TimeKey:        "time",
+		LevelKey:       "level",
+		NameKey:        "logger",
+		CallerKey:      "caller",
+		MessageKey:     "msg",
+		StacktraceKey:  "stacktrace",
+		LineEnding:     zapcore.DefaultLineEnding,
+		EncodeLevel:    zapcore.LowercaseLevelEncoder,
+		EncodeTime:     zapcore.ISO8601TimeEncoder,
+		EncodeDuration: zapcore.SecondsDurationEncoder,
+		EncodeCaller:   zapcore.ShortCallerEncoder,
+	}
 
 	if debug {
-		config = zap.NewDevelopmentConfig()
-		config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
-	} else {
-		config = zap.NewProductionConfig()
-		config.EncoderConfig.TimeKey = "time"
-		config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+		encoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	}
 
-	config.OutputPaths = []string{"stdout"}
-	config.ErrorOutputPaths = []string{"stderr"}
-
-	logger, err := config.Build()
-	if err != nil {
-		os.Exit(1)
-	}
+	core := zapcore.NewCore(
+		zapcore.NewJSONEncoder(encoderConfig),
+		zapcore.AddSync(os.Stdout),
+		atomicLevel,
+	)
 
 	// Wrap core with broadcast hook
-	broadcastCore := &broadcastCoreWrapper{Core: logger.Core()}
+	broadcastCore := &broadcastCoreWrapper{Core: core}
 	Log = zap.New(broadcastCore).Sugar()
 }
 
@@ -39,6 +51,21 @@ func Sync() {
 	if Log != nil {
 		Log.Sync()
 	}
+}
+
+// SetLevel changes the log level dynamically
+func SetLevel(level string) error {
+	var l zapcore.Level
+	if err := l.UnmarshalText([]byte(level)); err != nil {
+		return err
+	}
+	atomicLevel.SetLevel(l)
+	return nil
+}
+
+// GetLevel returns the current log level
+func GetLevel() string {
+	return atomicLevel.Level().String()
 }
 
 // SetBroadcastFunc sets the function to broadcast logs to WebSocket clients

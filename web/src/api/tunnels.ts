@@ -65,3 +65,22 @@ export function getLogsWebSocketUrl(): string {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   return `${protocol}//${window.location.host}/api/ws/logs`;
 }
+
+export async function getLogLevel(): Promise<string> {
+  const res = await fetch(`${API_BASE}/log-level`);
+  if (!res.ok) throw new Error('Failed to get log level');
+  const data = await res.json();
+  return data.level;
+}
+
+export async function setLogLevel(level: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/log-level`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ level }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to set log level');
+  }
+}

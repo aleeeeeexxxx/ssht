@@ -85,6 +85,8 @@ func (s *Server) setupRoutes() {
 		api.POST("/tunnels/:name/start", s.startTunnel)
 		api.POST("/tunnels/:name/stop", s.stopTunnel)
 		api.GET("/ws/logs", s.handleWebSocketLogs)
+		api.GET("/log-level", s.getLogLevel)
+		api.PUT("/log-level", s.setLogLevel)
 	}
 
 	// Static files
@@ -254,4 +256,26 @@ func (s *Server) stopTunnel(c *gin.Context) {
 	s.manager.Stop(name)
 	logger.Log.Infow("tunnel stopped", "tunnel", name)
 	c.JSON(http.StatusOK, gin.H{"message": "tunnel stopped"})
+}
+
+func (s *Server) getLogLevel(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"level": logger.GetLevel()})
+}
+
+func (s *Server) setLogLevel(c *gin.Context) {
+	var req struct {
+		Level string `json:"level" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := logger.SetLevel(req.Level); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid level: " + err.Error()})
+		return
+	}
+
+	logger.Log.Infow("log level changed", "level", req.Level)
+	c.JSON(http.StatusOK, gin.H{"message": "log level updated", "level": req.Level})
 }

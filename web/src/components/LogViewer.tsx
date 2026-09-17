@@ -9,10 +9,18 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
 } from '@mui/material';
-import { Delete as ClearIcon } from '@mui/icons-material';
+import { Delete as ClearIcon, Settings as SettingsIcon } from '@mui/icons-material';
 import type { LogEntry } from '../types/tunnel';
-import { getLogsWebSocketUrl } from '../api/tunnels';
+import { getLogsWebSocketUrl, getLogLevel, setLogLevel } from '../api/tunnels';
 
 const levelColors: Record<string, 'success' | 'info' | 'warning' | 'error' | 'default'> = {
   DEBUG: 'default',
@@ -24,9 +32,19 @@ const levelColors: Record<string, 'success' | 'info' | 'warning' | 'error' | 'de
 export default function LogViewer() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [filter, setFilter] = useState<string>('all');
+  const [serverLevel, setServerLevel] = useState<string>('info');
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [tempLevel, setTempLevel] = useState<string>('info');
   const [connected, setConnected] = useState(false);
   const logsEndRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    getLogLevel().then((level) => {
+      setServerLevel(level);
+      setTempLevel(level);
+    }).catch(console.error);
+  }, []);
 
   useEffect(() => {
     const connect = () => {
@@ -79,6 +97,21 @@ export default function LogViewer() {
     setLogs([]);
   };
 
+  const handleOpenSettings = () => {
+    setTempLevel(serverLevel);
+    setSettingsOpen(true);
+  };
+
+  const handleSaveSettings = async () => {
+    try {
+      await setLogLevel(tempLevel);
+      setServerLevel(tempLevel);
+      setSettingsOpen(false);
+    } catch (err) {
+      console.error('Failed to set log level:', err);
+    }
+  };
+
   return (
     <Paper sx={{ p: 2, height: '100%', minHeight: 200, display: 'flex', flexDirection: 'column' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -92,10 +125,10 @@ export default function LogViewer() {
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <FormControl size="small" sx={{ minWidth: 100 }}>
-            <InputLabel>Level</InputLabel>
+            <InputLabel>Filter</InputLabel>
             <Select
               value={filter}
-              label="Level"
+              label="Filter"
               onChange={(e) => setFilter(e.target.value)}
             >
               <MenuItem value="all">All</MenuItem>
@@ -105,7 +138,10 @@ export default function LogViewer() {
               <MenuItem value="ERROR">Error</MenuItem>
             </Select>
           </FormControl>
-          <IconButton size="small" onClick={handleClear}>
+          <IconButton size="small" onClick={handleOpenSettings} title="Log Settings">
+            <SettingsIcon />
+          </IconButton>
+          <IconButton size="small" onClick={handleClear} title="Clear Logs">
             <ClearIcon />
           </IconButton>
         </Box>
@@ -157,6 +193,28 @@ export default function LogViewer() {
         )}
         <div ref={logsEndRef} />
       </Box>
+
+      <Dialog open={settingsOpen} onClose={() => setSettingsOpen(false)}>
+        <DialogTitle>Log Settings</DialogTitle>
+        <DialogContent>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            Server Log Level
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+            Current: {serverLevel.toUpperCase()}
+          </Typography>
+          <RadioGroup value={tempLevel} onChange={(e) => setTempLevel(e.target.value)}>
+            <FormControlLabel value="debug" control={<Radio />} label="Debug - All logs" />
+            <FormControlLabel value="info" control={<Radio />} label="Info - Info and above" />
+            <FormControlLabel value="warn" control={<Radio />} label="Warn - Warnings and errors" />
+            <FormControlLabel value="error" control={<Radio />} label="Error - Errors only" />
+          </RadioGroup>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSettingsOpen(false)}>Cancel</Button>
+          <Button onClick={handleSaveSettings} variant="contained">Save</Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 }
