@@ -42,6 +42,7 @@ const defaultForm: CreateTunnelRequest = {
 export default function TunnelForm({ open, tunnel, onClose, onSuccess }: TunnelFormProps) {
   const [form, setForm] = useState<CreateTunnelRequest>(defaultForm);
   const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const [keyFileName, setKeyFileName] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -67,12 +68,16 @@ export default function TunnelForm({ open, tunnel, onClose, onSuccess }: TunnelF
       setKeyFileName('');
     }
     setError(null);
+    setErrors({});
   }, [tunnel, open]);
 
   const handleChange = (field: keyof CreateTunnelRequest) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: false }));
+    }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,11 +89,28 @@ export default function TunnelForm({ open, tunnel, onClose, onSuccess }: TunnelF
       const content = event.target?.result as string;
       setForm((prev) => ({ ...prev, key_content: content, key_path: '' }));
       setKeyFileName(file.name);
+      if (errors.key) {
+        setErrors((prev) => ({ ...prev, key: false }));
+      }
     };
     reader.readAsText(file);
   };
 
   const handleSubmit = async () => {
+    // Validate required fields
+    const newErrors: Record<string, boolean> = {};
+    if (!form.name.trim()) newErrors.name = true;
+    if (!form.host.trim()) newErrors.host = true;
+    if (!form.user.trim()) newErrors.user = true;
+    if (form.auth_method === 'key' && !keyFileName && !form.key_path) newErrors.key = true;
+    if (form.auth_method === 'password' && !form.password) newErrors.password = true;
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setError('Please fill in all required fields');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -121,16 +143,22 @@ export default function TunnelForm({ open, tunnel, onClose, onSuccess }: TunnelF
           <TextField
             label="Name"
             fullWidth
+            required
             value={form.name}
             onChange={handleChange('name')}
             disabled={!!tunnel}
+            error={errors.name}
+            helperText={errors.name ? 'Name is required' : ''}
           />
           <Box sx={{ display: 'flex', gap: 2 }}>
             <TextField
               label="SSH Host"
               fullWidth
+              required
               value={form.host}
               onChange={handleChange('host')}
+              error={errors.host}
+              helperText={errors.host ? 'Host is required' : ''}
             />
             <TextField
               label="SSH Port"
@@ -143,8 +171,11 @@ export default function TunnelForm({ open, tunnel, onClose, onSuccess }: TunnelF
           <TextField
             label="Username"
             fullWidth
+            required
             value={form.user}
             onChange={handleChange('user')}
+            error={errors.user}
+            helperText={errors.user ? 'Username is required' : ''}
           />
           <FormControl fullWidth>
             <InputLabel>Auth Method</InputLabel>
@@ -168,13 +199,19 @@ export default function TunnelForm({ open, tunnel, onClose, onSuccess }: TunnelF
               />
               <Button
                 variant="outlined"
+                color={errors.key ? 'error' : 'primary'}
                 startIcon={<UploadIcon />}
                 onClick={() => fileInputRef.current?.click()}
                 fullWidth
+                sx={errors.key ? { borderColor: 'error.main' } : {}}
               >
-                {keyFileName ? `Key: ${keyFileName}` : 'Upload SSH Key'}
+                {keyFileName ? `Key: ${keyFileName}` : 'Upload SSH Key *'}
               </Button>
-              {!keyFileName && (
+              {errors.key ? (
+                <Typography variant="caption" color="error">
+                  SSH key is required
+                </Typography>
+              ) : !keyFileName && (
                 <Typography variant="caption" color="text.secondary">
                   Select your private key file (e.g., id_rsa)
                 </Typography>
@@ -185,8 +222,11 @@ export default function TunnelForm({ open, tunnel, onClose, onSuccess }: TunnelF
               label="Password"
               type="password"
               fullWidth
+              required
               value={form.password}
               onChange={handleChange('password')}
+              error={errors.password}
+              helperText={errors.password ? 'Password is required' : ''}
             />
           )}
           <Box sx={{ display: 'flex', gap: 2 }}>
