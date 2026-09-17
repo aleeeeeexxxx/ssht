@@ -10,10 +10,10 @@ import (
 )
 
 type Server struct {
-	config     *config.Config
-	configPath string
-	manager    *tunnel.Manager
-	router     *gin.Engine
+	config    *config.Config
+	statePath string
+	manager   *tunnel.Manager
+	router    *gin.Engine
 }
 
 type TunnelResponse struct {
@@ -44,7 +44,7 @@ type CreateTunnelRequest struct {
 	LocalPort  int    `json:"local_port" binding:"required"`
 }
 
-func NewServer(cfg *config.Config, configPath string, manager *tunnel.Manager) *Server {
+func NewServer(cfg *config.Config, statePath string, manager *tunnel.Manager) *Server {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 	router.RedirectTrailingSlash = false
@@ -52,10 +52,10 @@ func NewServer(cfg *config.Config, configPath string, manager *tunnel.Manager) *
 	router.Use(loggerMiddleware())
 
 	s := &Server{
-		config:     cfg,
-		configPath: configPath,
-		manager:    manager,
-		router:     router,
+		config:    cfg,
+		statePath: statePath,
+		manager:   manager,
+		router:    router,
 	}
 
 	s.setupRoutes()
@@ -152,7 +152,7 @@ func (s *Server) createTunnel(c *gin.Context) {
 	}
 
 	s.config.Add(tc)
-	if err := config.Save(s.configPath, s.config); err != nil {
+	if err := config.Save(s.statePath, s.config); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -203,7 +203,7 @@ func (s *Server) deleteTunnel(c *gin.Context) {
 
 	s.manager.Remove(name)
 	s.config.Remove(name)
-	if err := config.Save(s.configPath, s.config); err != nil {
+	if err := config.Save(s.statePath, s.config); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

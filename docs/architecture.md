@@ -147,7 +147,24 @@ func (h *broadcastHook) Write(p []byte) (n int, err error) {
 
 ### 5. Config (`internal/config/config.go`)
 
-JSON 配置持久化：
+**双文件方案**：
+- `~/.config/ssht/config.json` — 用户配置模板（只读）
+- `~/.local/state/ssht/state.json` — 运行时状态（可写）
+
+**启动时 Merge 逻辑**：
+```
+1. 读 state.json（如果存在）
+2. 读 config.json（如果存在）
+3. Merge:
+   - config 有，state 没有 → 添加
+   - config 有，state 也有 → config 覆盖
+   - config 没有，state 有 → 保留
+4. 结果存入 state.json
+```
+
+**运行时**：所有 CRUD 操作只写 state.json
+
+配置格式：
 
 ```json
 {
@@ -167,8 +184,6 @@ JSON 配置持久化：
   ]
 }
 ```
-
-默认路径：`~/.config/ssht/config.json`
 
 ## Frontend Architecture
 

@@ -31,17 +31,14 @@ func main() {
 
 	logger.Log.Info("ssht starting")
 
-	cfg, err := config.Load(*configPath)
+	cfg, err := config.LoadWithMerge(*configPath, "")
 	if err != nil {
 		logger.Log.Fatalw("failed to load config", "error", err)
 	}
 
-	path := *configPath
-	if path == "" {
-		path = config.DefaultPath()
-	}
+	statePath := config.StatePath()
 
-	logger.Log.Infow("loaded config", "tunnel_count", len(cfg.Tunnels))
+	logger.Log.Infow("loaded config", "tunnel_count", len(cfg.Tunnels), "state_path", statePath)
 
 	manager := tunnel.NewManager()
 
@@ -56,7 +53,7 @@ func main() {
 	}
 
 	// Start HTTP server
-	server := api.NewServer(cfg, path, manager)
+	server := api.NewServer(cfg, statePath, manager)
 
 	go func() {
 		if err := server.Run(*addr); err != nil {

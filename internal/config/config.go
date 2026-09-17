@@ -17,6 +17,11 @@ func DefaultPath() string {
 	return filepath.Join(home, ".config", "ssht", "config.json")
 }
 
+func StatePath() string {
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".local", "state", "ssht", "state.json")
+}
+
 func Load(path string) (*Config, error) {
 	if path == "" {
 		path = DefaultPath()
@@ -94,4 +99,68 @@ func (c *Config) Get(name string) *tunnel.Config {
 		}
 	}
 	return nil
+}
+
+// LoadWithMerge loads state, merges config into it, and saves back to state.
+// Merge logic:
+//   - config has, state doesn't → add
+//   - config has, state has (same name) → config overwrites
+//   - config doesn't have, state has → keep
+func LoadWithMerge(configPath, statePath string) (*Config, error) {
+	if configPath == "" {
+		configPath = DefaultPath()
+	}
+	if statePath == "" {
+		statePath = StatePath()
+	}
+
+	// Load state first
+	state, _ := Load(statePath)
+	if state == nil {
+		state = &Config{Tunnels: []tunnel.Config{}}
+	}
+
+	// Load config
+	cfg, _ := Load(configPath)
+	if cfg == nil || len(cfg.Tunnels) == 0 {
+		// No config to merge, just return state
+		return state, nil
+	}
+
+	// Build a map of state tunnels by name
+	stateMap := make(map[string]int)
+	for i, t := range state.Tunnels {
+		stateMap[t.Name] = i
+	}
+
+	// Merge config into state
+	for _, ct := range cfg.Tunnels {
+		if idx, exists := stateMap[ct.Name]; exists {
+			// Config overwrites state
+			state.Tunnels[idx] = ct
+		} else {
+			// Add new from config
+			state.Tunnels = append(state.Tunnels, ct)
+		}
+	}
+
+	// Apply defaults
+	for i := range state.Tunnels {
+		if state.Tunnels[i].Port == 0 {
+			state.Tunnels[i].Port = 22
+		}
+		if state.Tunnels[i].LocalHost == "" {
+			state.Tunnels[i].LocalHost = "127.0.0.1"
+		}
+		if state.Tunnels[i].RemoteHost == "" {
+			state.Tunnels[i].RemoteHost = "0.0.0.0"
+		}
+	}
+
+	// Save merged result to state
+	if err := Save(statePath, state); err != nil {
+		return nil, err
+	}
+
+	return state, nil
 }

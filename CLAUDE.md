@@ -96,6 +96,11 @@ docs/
 
 ## Key Patterns
 
+**Config + State 分离**:
+- `~/.config/ssht/config.json` — 用户配置模板（只读）
+- `~/.local/state/ssht/state.json` — 运行时状态（可写）
+- 启动时 merge：config 覆盖同名，state 独有保留
+
 **State management**: Tunnel state changes broadcast via `chan StateChange` from Manager to API.
 
 **Reconnect loop**: On connection loss, waits 5 seconds then retries automatically.
@@ -104,7 +109,8 @@ docs/
 
 ## Config File Format
 
-Location: `~/.config/ssht/config.json`
+用户配置: `~/.config/ssht/config.json`（只读模板）
+运行状态: `~/.local/state/ssht/state.json`（运行时自动生成）
 
 ```json
 {
