@@ -64,4 +64,16 @@ docker: web-build
 	docker build -t $(IMAGE_NAME) .
 
 docker-run:
-	docker run -p 6001:6001 -v ~/.ssh:/root/.ssh:ro -v ~/.config/ssht:/root/.config/ssht $(IMAGE_NAME)
+	docker run -p 6001:6001 \
+		-v ~/.ssh:/root/.ssh:ro \
+		-v ~/.config/ssht:/root/.config/ssht:ro \
+		-v ~/.local/state/ssht:/root/.local/state/ssht \
+		$(IMAGE_NAME)
+
+docker-deploy: docker
+	docker run -d --name ssht --restart unless-stopped \
+		-p 6001:6001 \
+		-v ~/.ssh:/root/.ssh:ro \
+		-v ~/.config/ssht:/root/.config/ssht:ro \
+		-v ~/.local/state/ssht:/root/.local/state/ssht \
+		$(IMAGE_NAME)
