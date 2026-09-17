@@ -31,7 +31,7 @@ const defaultForm: CreateTunnelRequest = {
   port: 22,
   user: '',
   auth_method: 'key',
-  key_path: '~/.ssh/id_rsa',
+  key_path: '',
   password: '',
   remote_host: '0.0.0.0',
   remote_port: 8080,
@@ -153,34 +153,24 @@ export default function TunnelForm({ open, tunnel, onClose, onSuccess }: TunnelF
           </FormControl>
           {form.auth_method === 'key' ? (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                <TextField
-                  label="Key Path"
-                  fullWidth
-                  value={form.key_path}
-                  onChange={handleChange('key_path')}
-                  disabled={!!keyFileName}
-                  placeholder={keyFileName ? `Uploaded: ${keyFileName}` : '~/.ssh/id_rsa'}
-                />
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileSelect}
-                  style={{ display: 'none' }}
-                  accept=".pem,.key,*"
-                />
-                <Button
-                  variant="outlined"
-                  startIcon={<UploadIcon />}
-                  onClick={() => fileInputRef.current?.click()}
-                  sx={{ whiteSpace: 'nowrap' }}
-                >
-                  Upload
-                </Button>
-              </Box>
-              {keyFileName && (
-                <Typography variant="caption" color="success.main">
-                  Key file loaded: {keyFileName}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                style={{ display: 'none' }}
+                accept=".pem,.key,*"
+              />
+              <Button
+                variant="outlined"
+                startIcon={<UploadIcon />}
+                onClick={() => fileInputRef.current?.click()}
+                fullWidth
+              >
+                {keyFileName ? `Key: ${keyFileName}` : 'Upload SSH Key'}
+              </Button>
+              {!keyFileName && (
+                <Typography variant="caption" color="text.secondary">
+                  Select your private key file (e.g., id_rsa)
                 </Typography>
               )}
             </Box>
