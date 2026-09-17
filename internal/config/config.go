@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/aleeeeeexxxx/ssht/internal/tunnel"
 )
@@ -13,11 +14,17 @@ type Config struct {
 }
 
 func DefaultPath() string {
+	if runtime.GOOS == "windows" {
+		return filepath.Join(os.Getenv("APPDATA"), "ssht", "config.json")
+	}
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".config", "ssht", "config.json")
 }
 
 func StatePath() string {
+	if runtime.GOOS == "windows" {
+		return filepath.Join(os.Getenv("LOCALAPPDATA"), "ssht", "state.json")
+	}
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".local", "state", "ssht", "state.json")
 }
