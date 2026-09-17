@@ -1,9 +1,10 @@
-.PHONY: build run test test-integration test-e2e lint fmt clean docker
+.PHONY: build run test test-integration test-e2e lint fmt clean docker web-install web-dev web-build build-all
 
 BINARY=ssht
 BUILD_DIR=bin
 IMAGE_NAME=ssht
 
+# Go build
 build:
 	go build -o $(BUILD_DIR)/$(BINARY) ./cmd/ssht
 
@@ -13,6 +14,7 @@ run:
 run-debug:
 	go run ./cmd/ssht -debug
 
+# Tests
 test:
 	go test ./...
 
@@ -27,6 +29,7 @@ test-e2e-cleanup:
 
 test-all: test test-integration
 
+# Code quality
 lint:
 	golangci-lint run
 
@@ -37,12 +40,27 @@ tidy:
 	go mod tidy
 
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf $(BUILD_DIR) cmd/ssht/dist
 
+# Web frontend
+web-install:
+	cd web && npm install
+
+web-dev:
+	cd web && npm run dev
+
+web-build:
+	cd web && npm run build
+
+# Full build (frontend + backend)
+build-all: web-build build
+
+# Install
 install: build
 	cp $(BUILD_DIR)/$(BINARY) $(GOPATH)/bin/
 
-docker:
+# Docker
+docker: web-build
 	docker build -t $(IMAGE_NAME) .
 
 docker-run:

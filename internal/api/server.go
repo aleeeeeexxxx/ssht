@@ -47,6 +47,7 @@ type CreateTunnelRequest struct {
 func NewServer(cfg *config.Config, configPath string, manager *tunnel.Manager) *Server {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
+	router.RedirectTrailingSlash = false
 	router.Use(gin.Recovery())
 	router.Use(loggerMiddleware())
 
@@ -73,12 +74,20 @@ func loggerMiddleware() gin.HandlerFunc {
 }
 
 func (s *Server) setupRoutes() {
-	s.router.GET("/tunnels", s.listTunnels)
-	s.router.POST("/tunnels", s.createTunnel)
-	s.router.GET("/tunnels/:name", s.getTunnel)
-	s.router.DELETE("/tunnels/:name", s.deleteTunnel)
-	s.router.POST("/tunnels/:name/start", s.startTunnel)
-	s.router.POST("/tunnels/:name/stop", s.stopTunnel)
+	// API routes
+	api := s.router.Group("/api")
+	{
+		api.GET("/tunnels", s.listTunnels)
+		api.POST("/tunnels", s.createTunnel)
+		api.GET("/tunnels/:name", s.getTunnel)
+		api.DELETE("/tunnels/:name", s.deleteTunnel)
+		api.POST("/tunnels/:name/start", s.startTunnel)
+		api.POST("/tunnels/:name/stop", s.stopTunnel)
+		api.GET("/ws/logs", s.handleWebSocketLogs)
+	}
+
+	// Static files
+	s.setupStatic()
 }
 
 func (s *Server) Run(addr string) error {

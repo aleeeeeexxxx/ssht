@@ -8,6 +8,7 @@ import (
 )
 
 var Log *zap.SugaredLogger
+var broadcastFunc func(level, message string, fields map[string]interface{})
 
 func Init(debug bool) {
 	var config zap.Config
@@ -29,11 +30,24 @@ func Init(debug bool) {
 		os.Exit(1)
 	}
 
-	Log = logger.Sugar()
+	// Wrap with broadcast hook
+	Log = logger.WithOptions(zap.Hooks(broadcastHook)).Sugar()
 }
 
 func Sync() {
 	if Log != nil {
 		Log.Sync()
 	}
+}
+
+// SetBroadcastFunc sets the function to broadcast logs to WebSocket clients
+func SetBroadcastFunc(fn func(level, message string, fields map[string]interface{})) {
+	broadcastFunc = fn
+}
+
+func broadcastHook(entry zapcore.Entry) error {
+	if broadcastFunc != nil {
+		broadcastFunc(entry.Level.CapitalString(), entry.Message, nil)
+	}
+	return nil
 }

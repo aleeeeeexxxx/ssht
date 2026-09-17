@@ -1,7 +1,9 @@
 package main
 
 import (
+	"embed"
 	"flag"
+	"io/fs"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,6 +14,9 @@ import (
 	"github.com/aleeeeeexxxx/ssht/internal/tunnel"
 )
 
+//go:embed all:dist
+var distFS embed.FS
+
 func main() {
 	configPath := flag.String("config", "", "config file path (default: ~/.config/ssht/config.json)")
 	debug := flag.Bool("debug", false, "enable debug logging")
@@ -20,6 +25,9 @@ func main() {
 
 	logger.Init(*debug)
 	defer logger.Sync()
+
+	// Connect logger to WebSocket broadcast
+	logger.SetBroadcastFunc(api.BroadcastLog)
 
 	logger.Log.Info("ssht starting")
 
@@ -40,6 +48,11 @@ func main() {
 	// Add tunnels from config
 	for _, tc := range cfg.Tunnels {
 		manager.Add(tc)
+	}
+
+	// Setup static files
+	if subFS, err := fs.Sub(distFS, "dist"); err == nil {
+		api.SetStaticFS(subFS)
 	}
 
 	// Start HTTP server

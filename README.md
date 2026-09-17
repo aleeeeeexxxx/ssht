@@ -1,6 +1,6 @@
 # ssht
 
-SSH tunnel manager with HTTP API for Remote Forwarding (`-R`) tunnels.
+SSH tunnel manager with HTTP API and Web UI for Remote Forwarding (`-R`) tunnels.
 
 ## Features
 
@@ -8,16 +8,21 @@ SSH tunnel manager with HTTP API for Remote Forwarding (`-R`) tunnels.
 - Automatic reconnection on disconnect
 - Persistent JSON configuration
 - RESTful HTTP API
+- Web UI (React + MUI) with real-time logs
+- Single binary deployment (frontend embedded)
 - Docker support
 
 ## Quick Start
 
 ```bash
-# Build
-make build
+# Build (includes frontend)
+make build-all
 
 # Run (default port 6001)
 ./bin/ssht -debug
+
+# Open Web UI
+open http://localhost:6001
 
 # Or with Docker
 make docker
@@ -26,12 +31,14 @@ make docker-run
 
 ## HTTP API
 
+Base URL: `http://localhost:6001/api`
+
 ```bash
 # List tunnels
-curl http://localhost:6001/tunnels
+curl http://localhost:6001/api/tunnels
 
 # Create tunnel
-curl -X POST http://localhost:6001/tunnels \
+curl -X POST http://localhost:6001/api/tunnels \
   -H "Content-Type: application/json" \
   -d '{
     "name": "my-tunnel",
@@ -47,16 +54,16 @@ curl -X POST http://localhost:6001/tunnels \
   }'
 
 # Start tunnel
-curl -X POST http://localhost:6001/tunnels/my-tunnel/start
+curl -X POST http://localhost:6001/api/tunnels/my-tunnel/start
 
 # Get status
-curl http://localhost:6001/tunnels/my-tunnel
+curl http://localhost:6001/api/tunnels/my-tunnel
 
 # Stop tunnel
-curl -X POST http://localhost:6001/tunnels/my-tunnel/stop
+curl -X POST http://localhost:6001/api/tunnels/my-tunnel/stop
 
 # Delete tunnel
-curl -X DELETE http://localhost:6001/tunnels/my-tunnel
+curl -X DELETE http://localhost:6001/api/tunnels/my-tunnel
 ```
 
 ## Configuration
@@ -93,6 +100,18 @@ Config file location: `~/.config/ssht/config.json`
 ## Development
 
 ```bash
+# Backend only
+make build
+make run-debug
+
+# Frontend dev (hot reload)
+cd web && npm install && npm run dev
+# Then visit http://localhost:5173
+
+# Full build (frontend + backend)
+make build-all
+
+# Tests
 make test              # Unit tests
 make test-integration  # Integration tests
 make test-e2e          # E2E tests with docker-compose
