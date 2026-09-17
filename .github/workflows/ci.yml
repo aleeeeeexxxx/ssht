@@ -20,11 +20,12 @@ jobs:
       - name: Go mod download
         run: go mod download
 
-      - name: Go vet
-        run: go vet ./...
+      - name: Run e2e tests
+        run: make test-e2e
 
-      - name: Run tests
-        run: go test -v ./...
+      - name: Cleanup e2e
+        if: always()
+        run: make test-e2e-cleanup
 
   lint:
     runs-on: ubuntu-latest
