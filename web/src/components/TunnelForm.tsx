@@ -92,7 +92,13 @@ export default function TunnelForm({ open, tunnel, onClose, onSuccess }: TunnelF
     setLoading(true);
     setError(null);
     try {
-      await api.createTunnel(form);
+      const payload = {
+        ...form,
+        port: Number(form.port),
+        remote_port: Number(form.remote_port),
+        local_port: Number(form.local_port),
+      };
+      await api.createTunnel(payload);
       onSuccess();
       onClose();
     } catch (err) {
