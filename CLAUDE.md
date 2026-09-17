@@ -4,51 +4,74 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-`ssht` is an SSH tunnel manager for Remote Forwarding (`-R`) tunnels. Features:
+`ssht` is an SSH tunnel manager with HTTP API for Remote Forwarding (`-R`) tunnels. Features:
 - Multiple simultaneous tunnel connections
 - Automatic reconnection on disconnect
 - Persistent JSON configuration
+- RESTful HTTP API (Gin)
+- Structured logging (Zap)
 
 ## Development Commands
 
 ```bash
 # Build
-go build ./cmd/ssht
+make build
 
 # Run
-go run ./cmd/ssht
+make run
+make run-debug    # with debug logging
 
-# Run with custom config
-go run ./cmd/ssht -config /path/to/config.json
+# Test
+make test              # unit tests
+make test-integration  # integration tests (requires SSH server)
+make test-e2e          # e2e tests with docker-compose
+make test-e2e-cleanup  # cleanup e2e environment
 
-# Format code
-go fmt ./...
+# Docker
+make docker       # build image
+make docker-run   # run container
 
-# Run tests
-go test ./...
-
-# Tidy dependencies
-go mod tidy
+# Other
+make fmt          # format code
+make tidy         # tidy dependencies
+make lint         # run linter
+make clean        # clean build artifacts
 ```
 
 ## Architecture
 
 ```
-cmd/ssht/main.go          CLI entry point, signal handling
+cmd/ssht/main.go              CLI entry, HTTP server startup
 internal/
-├── config/config.go      JSON config load/save (~/.config/ssht/config.json)
+├── api/server.go             Gin HTTP API handlers
+├── config/config.go          JSON config load/save
+├── logger/logger.go          Zap logger setup
 └── tunnel/
-    ├── tunnel.go         Single tunnel: SSH connect, remote forward, auto-reconnect
-    └── manager.go        Multi-tunnel orchestration, state change notifications
+    ├── tunnel.go             SSH connect, remote forward, auto-reconnect
+    └── manager.go            Multi-tunnel orchestration
+e2e-test/
+├── docker-compose.yml        Test environment (ssht, ssh-server, echo-server)
+└── e2e_test.go               E2E tests in Go
 ```
+
+## HTTP API
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /tunnels | List all tunnels |
+| POST | /tunnels | Create tunnel |
+| GET | /tunnels/:name | Get tunnel status |
+| DELETE | /tunnels/:name | Delete tunnel |
+| POST | /tunnels/:name/start | Start tunnel |
+| POST | /tunnels/:name/stop | Stop tunnel |
 
 ## Key Patterns
 
-**State management**: Tunnel state changes broadcast via `chan StateChange` from Manager.
+**State management**: Tunnel state changes broadcast via `chan StateChange` from Manager to API.
 
 **Reconnect loop**: On connection loss, waits 5 seconds then retries automatically.
 
-**Auth methods**: Supports SSH key (`auth_method: "key"`) or password (`auth_method: "password"`).
+**Auth methods**: SSH key (`auth_method: "key"`) or password (`auth_method: "password"`).
 
 ## Config File Format
 
