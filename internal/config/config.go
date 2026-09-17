@@ -29,6 +29,36 @@ func StatePath() string {
 	return filepath.Join(home, ".local", "state", "ssht", "state.json")
 }
 
+func KeysDir() string {
+	if runtime.GOOS == "windows" {
+		return filepath.Join(os.Getenv("LOCALAPPDATA"), "ssht", "keys")
+	}
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".local", "state", "ssht", "keys")
+}
+
+func SaveKey(tunnelName, content string) (string, error) {
+	dir := KeysDir()
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return "", err
+	}
+
+	keyPath := filepath.Join(dir, tunnelName+".key")
+	if err := os.WriteFile(keyPath, []byte(content), 0600); err != nil {
+		return "", err
+	}
+
+	return keyPath, nil
+}
+
+func DeleteKey(tunnelName string) error {
+	keyPath := filepath.Join(KeysDir(), tunnelName+".key")
+	if err := os.Remove(keyPath); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
 func Load(path string) (*Config, error) {
 	if path == "" {
 		path = DefaultPath()

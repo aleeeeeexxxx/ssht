@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -12,7 +12,9 @@ import {
   MenuItem,
   Box,
   Alert,
+  Typography,
 } from '@mui/material';
+import { CloudUpload as UploadIcon } from '@mui/icons-material';
 import type { Tunnel, CreateTunnelRequest } from '../types/tunnel';
 import * as api from '../api/tunnels';
 
@@ -41,6 +43,8 @@ export default function TunnelForm({ open, tunnel, onClose, onSuccess }: TunnelF
   const [form, setForm] = useState<CreateTunnelRequest>(defaultForm);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [keyFileName, setKeyFileName] = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (tunnel) {
@@ -57,8 +61,10 @@ export default function TunnelForm({ open, tunnel, onClose, onSuccess }: TunnelF
         local_host: tunnel.local_host,
         local_port: tunnel.local_port,
       });
+      setKeyFileName('');
     } else {
       setForm(defaultForm);
+      setKeyFileName('');
     }
     setError(null);
   }, [tunnel, open]);
@@ -67,6 +73,19 @@ export default function TunnelForm({ open, tunnel, onClose, onSuccess }: TunnelF
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      setForm((prev) => ({ ...prev, key_content: content, key_path: '' }));
+      setKeyFileName(file.name);
+    };
+    reader.readAsText(file);
   };
 
   const handleSubmit = async () => {
@@ -133,12 +152,38 @@ export default function TunnelForm({ open, tunnel, onClose, onSuccess }: TunnelF
             </Select>
           </FormControl>
           {form.auth_method === 'key' ? (
-            <TextField
-              label="Key Path"
-              fullWidth
-              value={form.key_path}
-              onChange={handleChange('key_path')}
-            />
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <TextField
+                  label="Key Path"
+                  fullWidth
+                  value={form.key_path}
+                  onChange={handleChange('key_path')}
+                  disabled={!!keyFileName}
+                  placeholder={keyFileName ? `Uploaded: ${keyFileName}` : '~/.ssh/id_rsa'}
+                />
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                  style={{ display: 'none' }}
+                  accept=".pem,.key,*"
+                />
+                <Button
+                  variant="outlined"
+                  startIcon={<UploadIcon />}
+                  onClick={() => fileInputRef.current?.click()}
+                  sx={{ whiteSpace: 'nowrap' }}
+                >
+                  Upload
+                </Button>
+              </Box>
+              {keyFileName && (
+                <Typography variant="caption" color="success.main">
+                  Key file loaded: {keyFileName}
+                </Typography>
+              )}
+            </Box>
           ) : (
             <TextField
               label="Password"

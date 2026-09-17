@@ -23,6 +23,7 @@ export interface CreateTunnelRequest {
   user: string;
   auth_method: 'key' | 'password';
   key_path?: string;
+  key_content?: string;
   password?: string;
   remote_host?: string;
   remote_port: number;

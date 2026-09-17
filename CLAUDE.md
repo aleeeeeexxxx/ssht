@@ -99,7 +99,10 @@ docs/
 **Config + State 分离**:
 - `~/.config/ssht/config.json` — 用户配置模板（只读）
 - `~/.local/state/ssht/state.json` — 运行时状态（可写）
+- `~/.local/state/ssht/keys/` — 托管的 SSH key 文件
 - 启动时 merge：config 覆盖同名，state 独有保留
+
+**SSH Key 托管**: UI 上传的 key 文件保存到 keys 目录，删除 tunnel 时自动清理。
 
 **State management**: Tunnel state changes broadcast via `chan StateChange` from Manager to API.
 

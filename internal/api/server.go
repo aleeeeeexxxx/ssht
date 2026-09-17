@@ -37,6 +37,7 @@ type CreateTunnelRequest struct {
 	User       string `json:"user" binding:"required"`
 	AuthMethod string `json:"auth_method" binding:"required"`
 	KeyPath    string `json:"key_path,omitempty"`
+	KeyContent string `json:"key_content,omitempty"`
 	Password   string `json:"password,omitempty"`
 	RemoteHost string `json:"remote_host"`
 	RemotePort int    `json:"remote_port" binding:"required"`
@@ -137,13 +138,25 @@ func (s *Server) createTunnel(c *gin.Context) {
 		req.LocalHost = "127.0.0.1"
 	}
 
+	// Handle key_content: save to managed keys directory
+	keyPath := req.KeyPath
+	if req.KeyContent != "" {
+		var err error
+		keyPath, err = config.SaveKey(req.Name, req.KeyContent)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save key: " + err.Error()})
+			return
+		}
+		logger.Log.Infow("key saved", "tunnel", req.Name, "path", keyPath)
+	}
+
 	tc := tunnel.Config{
 		Name:       req.Name,
 		Host:       req.Host,
 		Port:       req.Port,
 		User:       req.User,
 		AuthMethod: req.AuthMethod,
-		KeyPath:    req.KeyPath,
+		KeyPath:    keyPath,
 		Password:   req.Password,
 		RemoteHost: req.RemoteHost,
 		RemotePort: req.RemotePort,
@@ -207,6 +220,9 @@ func (s *Server) deleteTunnel(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Clean up managed key file
+	config.DeleteKey(name)
 
 	logger.Log.Infow("tunnel deleted", "tunnel", name)
 	c.JSON(http.StatusOK, gin.H{"message": "tunnel deleted"})
