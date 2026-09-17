@@ -286,34 +286,44 @@ func (t *Tunnel) connect() error {
 func (t *Tunnel) getAuthMethods() ([]ssh.AuthMethod, error) {
 	var methods []ssh.AuthMethod
 
+	logger.Log.Debugw("getting auth methods", "tunnel", t.Config.Name, "auth_method", t.Config.AuthMethod)
+
 	switch t.Config.AuthMethod {
 	case "key":
 		keyPath := t.Config.KeyPath
 		if keyPath == "" {
 			home, _ := os.UserHomeDir()
 			keyPath = home + "/.ssh/id_rsa"
+			logger.Log.Debugw("using default key path", "path", keyPath)
 		} else if len(keyPath) > 0 && keyPath[0] == '~' {
 			home, _ := os.UserHomeDir()
 			keyPath = home + keyPath[1:]
 		}
-		logger.Log.Debugw("loading SSH key", "path", keyPath)
+		logger.Log.Debugw("loading SSH key", "tunnel", t.Config.Name, "path", keyPath)
 		key, err := os.ReadFile(keyPath)
 		if err != nil {
+			logger.Log.Errorw("failed to read key file", "tunnel", t.Config.Name, "path", keyPath, "error", err)
 			return nil, fmt.Errorf("read key file: %w", err)
 		}
+		logger.Log.Debugw("key file loaded", "tunnel", t.Config.Name, "size", len(key))
 		signer, err := ssh.ParsePrivateKey(key)
 		if err != nil {
+			logger.Log.Errorw("failed to parse private key", "tunnel", t.Config.Name, "error", err)
 			return nil, fmt.Errorf("parse private key: %w", err)
 		}
+		logger.Log.Debugw("SSH key parsed successfully", "tunnel", t.Config.Name)
 		methods = append(methods, ssh.PublicKeys(signer))
 
 	case "password":
+		logger.Log.Debugw("using password auth", "tunnel", t.Config.Name)
 		methods = append(methods, ssh.Password(t.Config.Password))
 
 	default:
+		logger.Log.Errorw("unknown auth method", "tunnel", t.Config.Name, "auth_method", t.Config.AuthMethod)
 		return nil, fmt.Errorf("unknown auth method: %s", t.Config.AuthMethod)
 	}
 
+	logger.Log.Debugw("auth methods ready", "tunnel", t.Config.Name, "method_count", len(methods))
 	return methods, nil
 }
 
