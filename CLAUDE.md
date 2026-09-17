@@ -12,6 +12,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ♻️ refactor: 重构
 - 🧪 test: 测试相关
 - 🔧 chore: 杂项
+- 🚀 release: 发布相关
+
+**重要**：push 之前先问用户确认。
 
 ## Development Tips
 
