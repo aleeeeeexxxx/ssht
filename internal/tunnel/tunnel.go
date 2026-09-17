@@ -23,6 +23,8 @@ const (
 	StateError
 )
 
+const maxRetries = 5
+
 func (s State) String() string {
 	switch s {
 	case StateStopped:
@@ -169,6 +171,7 @@ func (t *Tunnel) Stop() {
 }
 
 func (t *Tunnel) run() {
+	retries := 0
 	for {
 		select {
 		case <-t.ctx.Done():
@@ -188,9 +191,24 @@ func (t *Tunnel) run() {
 				return
 			default:
 			}
+
+			retries++
+			if retries >= maxRetries {
+				logger.Log.Errorw("max retries reached, stopping tunnel",
+					"tunnel", t.Config.Name,
+					"retries", retries,
+					"error", err,
+				)
+				t.cleanup()
+				t.setState(StateError, fmt.Sprintf("max retries (%d) reached: %s", maxRetries, err.Error()))
+				return
+			}
+
 			logger.Log.Warnw("connection failed, will retry",
 				"tunnel", t.Config.Name,
 				"error", err,
+				"retry", retries,
+				"max_retries", maxRetries,
 				"retry_in", t.reconnectInterval,
 			)
 			t.setState(StateReconnecting, err.Error())
@@ -198,6 +216,8 @@ func (t *Tunnel) run() {
 			continue
 		}
 
+		// Connected successfully, reset retry counter
+		retries = 0
 		t.setState(StateConnected, "")
 		t.serve()
 
