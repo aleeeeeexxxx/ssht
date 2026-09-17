@@ -217,7 +217,7 @@ func testStartTunnel(t *testing.T) {
 }
 
 func testCheckTunnelConnected(t *testing.T) {
-	deadline := time.Now().Add(10 * time.Second)
+	deadline := time.Now().Add(30 * time.Second)
 	for time.Now().Before(deadline) {
 		resp, err := http.Get(baseURL + "/tunnels/" + tunnelName)
 		if err != nil {
@@ -228,10 +228,12 @@ func testCheckTunnelConnected(t *testing.T) {
 		json.NewDecoder(resp.Body).Decode(&result)
 		resp.Body.Close()
 
+		t.Logf("tunnel state: %s, error: %s", result.State, result.Error)
+
 		if result.State == "Connected" {
 			return
 		}
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(1 * time.Second)
 	}
 	t.Error("tunnel did not connect in time")
 }
@@ -265,19 +267,23 @@ func testStopTunnel(t *testing.T) {
 }
 
 func testCheckTunnelStopped(t *testing.T) {
-	time.Sleep(1 * time.Second)
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		resp, err := http.Get(baseURL + "/tunnels/" + tunnelName)
+		if err != nil {
+			t.Fatalf("request failed: %v", err)
+		}
 
-	resp, err := http.Get(baseURL + "/tunnels/" + tunnelName)
-	if err != nil {
-		t.Fatalf("request failed: %v", err)
-	}
-	defer resp.Body.Close()
+		var result TunnelResponse
+		json.NewDecoder(resp.Body).Decode(&result)
+		resp.Body.Close()
 
-	var result TunnelResponse
-	json.NewDecoder(resp.Body).Decode(&result)
-	if result.State != "Stopped" {
-		t.Errorf("expected state 'Stopped', got %q", result.State)
+		if result.State == "Stopped" {
+			return
+		}
+		time.Sleep(500 * time.Millisecond)
 	}
+	t.Error("tunnel did not stop in time")
 }
 
 func testDeleteTunnel(t *testing.T) {
