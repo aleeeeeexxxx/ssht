@@ -80,7 +80,7 @@ export default function LogViewer() {
   };
 
   return (
-    <Paper sx={{ p: 2, height: '35vh', minHeight: 200, display: 'flex', flexDirection: 'column' }}>
+    <Paper sx={{ p: 2, height: '100%', minHeight: 200, display: 'flex', flexDirection: 'column' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="h6">Logs</Typography>

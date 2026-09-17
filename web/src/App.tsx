@@ -21,6 +21,31 @@ const darkTheme = createTheme({
   palette: {
     mode: 'dark',
   },
+  typography: {
+    fontSize: 14,
+    body1: {
+      '@media (max-width:600px)': {
+        fontSize: '0.875rem',
+      },
+    },
+    body2: {
+      '@media (max-width:600px)': {
+        fontSize: '0.75rem',
+      },
+    },
+  },
+  components: {
+    MuiTableCell: {
+      styleOverrides: {
+        root: {
+          '@media (max-width:600px)': {
+            padding: '8px 4px',
+            fontSize: '0.75rem',
+          },
+        },
+      },
+    },
+  },
 });
 
 function App() {
@@ -89,15 +114,26 @@ function App() {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="lg" sx={{ mt: 3 }}>
-        <Box sx={{ mb: 3 }}>
-          <TunnelList
-            tunnels={tunnels}
-            onRefresh={fetchTunnels}
-            onEdit={handleEdit}
-          />
+      <Container maxWidth={false} sx={{ mt: 2, px: { xs: 2, md: '10%' } }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', md: 'row' },
+            gap: 2,
+            height: { md: 'calc(100vh - 100px)' },
+          }}
+        >
+          <Box sx={{ flex: { xs: '1', md: '1 1 60%' }, minWidth: 0, height: { xs: 'auto', md: '100%' }, overflow: 'auto' }}>
+            <TunnelList
+              tunnels={tunnels}
+              onRefresh={fetchTunnels}
+              onEdit={handleEdit}
+            />
+          </Box>
+          <Box sx={{ flex: { xs: '1', md: '1 1 40%' }, minWidth: 0, height: { xs: '50vh', md: '100%' } }}>
+            <LogViewer />
+          </Box>
         </Box>
-        <LogViewer />
       </Container>
 
       <TunnelForm
