@@ -66,7 +66,7 @@ func NewServer(cfg *config.Config, statePath string, manager *tunnel.Manager) *S
 func loggerMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
-		logger.Log.Infow("http request",
+		logger.Log.Debugw("http request",
 			"method", c.Request.Method,
 			"path", c.Request.URL.Path,
 			"status", c.Writer.Status(),
